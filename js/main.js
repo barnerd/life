@@ -36,16 +36,13 @@ LIFE.init = function() {
 
     LIFE.renderer = new THREE.WebGLRenderer({antialias:true});
     LIFE.renderer.setSize(WIDTH, HEIGHT);
+    document.body.appendChild(LIFE.renderer.domElement);
 
     // Create a camera, zoom it out from the model a bit, and add it to the scene.
     LIFE.camera = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 20000);
     LIFE.camera.position.set(0, 64*256, 0);
     LIFE.camera.lookAt(1, 64*256, 0);
     LIFE.scene.add(LIFE.camera);
-
-    // Render the scene.
-    LIFE.renderer.render(LIFE.scene, LIFE.camera);
-    document.body.appendChild(LIFE.renderer.domElement);
 
     LIFE.controls = new THREE.FirstPersonControls(LIFE.camera, LIFE.renderer.domElement);
     LIFE.controls.lookSpeed = 0.00008;
