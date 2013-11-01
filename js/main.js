@@ -53,6 +53,9 @@ LIFE.init = function() {
 
     // TODO: Add Intro screen with start button
     LIFE.start();
+
+    // bind keys
+    CONTROLS.bindKeys();
 };
 
 LIFE.start = function() {
