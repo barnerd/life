@@ -9,7 +9,6 @@ if ( !window.requestAnimationFrame ) {
     };
 })();
 }
-var ttt;
 var LIFE = {};
 
 // Create an event listener that resizes the renderer with the browser window.
@@ -26,7 +25,6 @@ LIFE.init = function() {
     LIFE.gameStepTime = 100;
      
     LIFE.frameTime = 0; // ms
-    LIFE.cumulatedFrameTime = 0; // ms
     LIFE._lastFrameTime = Date.now(); // timestamp
      
     LIFE.gameOver = false;
@@ -49,6 +47,10 @@ LIFE.init = function() {
     LIFE.renderer.render(LIFE.scene, LIFE.camera);
     document.body.appendChild(LIFE.renderer.domElement);
 
+    LIFE.controls = new THREE.FirstPersonControls(LIFE.camera, LIFE.renderer.domElement);
+    LIFE.controls.lookSpeed = 0.00008;
+    LIFE.controls.movementSpeed = 2.0;
+
     // TODO: Add Intro screen with start button
     LIFE.start();
 };
@@ -64,9 +66,9 @@ LIFE.createScene = function() {
     LIFE.pointLight.position.set(0, 32*4*256, 0);
     LIFE.scene.add(LIFE.pointLight);
 
-    console.log("start:" + (Date.now() - ttt));
+    console.log("start:" + (Date.now() - LIFE._lastFrameTime));
     LIFE.map = new MAP.createMap();
-    console.log("map created:" + (Date.now() - ttt));
+    console.log("map created:" + (Date.now() - LIFE._lastFrameTime));
 
     // create the particle variables
     var geometry = new THREE.Geometry(),
@@ -113,29 +115,21 @@ LIFE.createScene = function() {
     ground.scale.set(scale, scale, scale);
     ground.position.set(-scale*MAP.dimension/2, -scale*.3, -scale*MAP.dimension/2);
     LIFE.scene.add(ground);
-    console.log("map mesh:" + (Date.now() - ttt));
+    console.log("map mesh:" + (Date.now() - LIFE._lastFrameTime));
 
     LIFE.renderer.render(LIFE.scene, LIFE.camera);
-    console.log("map drawn:" + (Date.now() - ttt));
-
-    LIFE.controls = new THREE.OrbitControls(LIFE.camera, LIFE.renderer.domElement);
+    console.log("map drawn:" + (Date.now() - LIFE._lastFrameTime));
 };
 
  // Renders the scene and updates the render as needed.
 LIFE.animate = function() {
     var time = Date.now();
-    LIFE.frameTime = time - LIFE._lastFrameTime;
-    LIFE._lastFrameTime = time;
-    LIFE.cumulatedFrameTime += LIFE.frameTime;
+    var frameTimeDelta = time - LIFE._lastFrameTime;
 
-    /*while(LIFE.cumulatedFrameTime > LIFE.gameStepTime) {
-        // block movement will go here
-        LIFE.cumulatedFrameTime -= LIFE.gameStepTime;
-    }*/
-
+    LIFE.controls.update(frameTimeDelta);
     LIFE.renderer.render(LIFE.scene, LIFE.camera);
-    LIFE.controls.update();
 
+    LIFE._lastFrameTime = time;
     // Read more about requestAnimationFrame at http://www.paulirish.com/2011/requestanimationframe-for-smart-animating/
     if(!LIFE.gameOver) window.requestAnimationFrame(LIFE.animate);
 };
