@@ -123,7 +123,7 @@ LIFE.createScene = function() {
     // for testing Cannon.js
     var mass = 5, radius = 1;
     var sphereShape = new CANNON.Sphere(radius); // Step 1
-    sphereBody = new CANNON.RigidBody(mass,sphereShape); // Step 2
+    sphereBody = new CANNON.RigidBody(mass, sphereShape); // Step 2
     sphereBody.position.set(10,16*256,0);
     LIFE.world.add(sphereBody); // Step 3
 };
