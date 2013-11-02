@@ -10,7 +10,7 @@ if ( !window.requestAnimationFrame ) {
 })();
 }
 var LIFE = {};
-
+var sphereBody;
 // Create an event listener that resizes the renderer with the browser window.
 window.addEventListener('resize', function() {
   var WIDTH = window.innerWidth,
@@ -21,9 +21,6 @@ window.addEventListener('resize', function() {
 });
 
 LIFE.init = function() {
-    ttt = Date.now();
-    LIFE.gameStepTime = 100;
-     
     LIFE.frameTime = 0; // ms
     LIFE._lastFrameTime = Date.now(); // timestamp
      
@@ -31,6 +28,9 @@ LIFE.init = function() {
 
     // set the scene size
     LIFE.scene = new THREE.Scene();
+    LIFE.world = new CANNON.World();
+    LIFE.world.broadphase = new CANNON.NaiveBroadphase();
+    LIFE.world.gravity.set(0, -9.80665, 0);
     var WIDTH = window.innerWidth,
     HEIGHT = window.innerHeight;
 
@@ -39,8 +39,8 @@ LIFE.init = function() {
     document.body.appendChild(LIFE.renderer.domElement);
 
     // Create a camera, zoom it out from the model a bit, and add it to the scene.
-    LIFE.camera = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 20000);
-    LIFE.camera.position.set(0, 64*256, 0);
+    LIFE.camera = new THREE.PerspectiveCamera(40, WIDTH / HEIGHT, 0.1, 20000);
+    LIFE.camera.position.set(0, 16*256, 0);
     LIFE.camera.lookAt(1, 64*256, 0);
     LIFE.scene.add(LIFE.camera);
 
@@ -119,6 +119,13 @@ LIFE.createScene = function() {
 
     LIFE.renderer.render(LIFE.scene, LIFE.camera);
     console.log("map drawn:" + (Date.now() - LIFE._lastFrameTime));
+
+    // for testing Cannon.js
+    var mass = 5, radius = 1;
+    var sphereShape = new CANNON.Sphere(radius); // Step 1
+    sphereBody = new CANNON.RigidBody(mass,sphereShape); // Step 2
+    sphereBody.position.set(10,16*256,0);
+    LIFE.world.add(sphereBody); // Step 3
 };
 
  // Renders the scene and updates the render as needed.
@@ -127,7 +134,10 @@ LIFE.animate = function() {
     var frameTimeDelta = time - LIFE._lastFrameTime;
 
     LIFE.controls.update(frameTimeDelta);
+    LIFE.world.step(frameTimeDelta);
     LIFE.renderer.render(LIFE.scene, LIFE.camera);
+//console.log(sphereBody.position.x, sphereBody.position.y, sphereBody.position.z);
+    if(CONTROLS.testKeyBindings) { console.log(KeyboardJS.activeKeys()); }
 
     LIFE._lastFrameTime = time;
     // Read more about requestAnimationFrame at http://www.paulirish.com/2011/requestanimationframe-for-smart-animating/
