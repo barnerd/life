@@ -71,54 +71,8 @@ LIFE.createScene = function() {
 
     console.log("start:" + (Date.now() - LIFE._lastFrameTime));
     LIFE.map = new MAP.createMap();
-    console.log("map created:" + (Date.now() - LIFE._lastFrameTime));
 
-    // create the particle variables
-    var geometry = new THREE.Geometry(),
-        count, c, tr, br, bl,
-        scale = 100,
-        color = new THREE.Color(),
-        normal = new THREE.Vector3(0, 1, 0);
-
-    // now create the individual particles
-    var i, j;
-    for (i = 0; i < MAP.dimension; i += 1) {
-    for (j = 0; j < MAP.dimension; j += 1) {
-        c = LIFE.map[i][j];
-        tr = LIFE.map[i+1][j];
-        br = LIFE.map[i+1][j+1];
-        bl = LIFE.map[i][j+1];
-
-        geometry.vertices.push(new THREE.Vector3(i, c*64, j));
-        geometry.vertices.push(new THREE.Vector3(i+1, tr*64, j));
-        geometry.vertices.push(new THREE.Vector3(i+1, br*64, j+1));
-        geometry.vertices.push(new THREE.Vector3(i, bl*64, j+1));
-
-        color = MAP.colorFade(c);
-        geometry.colors.push(color);
-        geometry.colors.push(color);
-        geometry.colors.push(color);
-        geometry.colors.push(color);
-
-        count = (j+i*(MAP.dimension))*4;
-        geometry.faces.push(new THREE.Face3(count, count+2, count+1, normal, color));
-        geometry.faces.push(new THREE.Face3(count+3, count+2, count, normal, color));
-    }
-    }
-    var material = new THREE.MeshLambertMaterial({
-        wireframe: false,
-        wireframeLinewidth: 3,
-        vertexColors: THREE.VertexColors,
-        shading: THREE.SmoothShading
-    });
-    geometry.mergeVertices();
-    geometry.computeFaceNormals();
-    geometry.computeVertexNormals();
-    var ground = new THREE.Mesh(geometry, material);
-    ground.scale.set(scale, scale, scale);
-    ground.position.set(-scale*MAP.dimension/2, -scale*.3, -scale*MAP.dimension/2);
-    LIFE.scene.add(ground);
-    console.log("map mesh:" + (Date.now() - LIFE._lastFrameTime));
+    LIFE.scene.add(LIFE.map.mesh);
 
     LIFE.renderer.render(LIFE.scene, LIFE.camera);
     console.log("map drawn:" + (Date.now() - LIFE._lastFrameTime));

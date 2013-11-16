@@ -1,12 +1,15 @@
-var MAP = {};
+var MAP = MAP || {};
 
 MAP.createMap = function() {
 	// check to see if map section is already created
 
 	// create height map
 	MAP.createHeightMap(128, .75);
+console.log("map created:" + (Date.now() - LIFE._lastFrameTime));
 
 	// post-process height map
+	MAP.createMesh();
+console.log("map mesh:" + (Date.now() - LIFE._lastFrameTime));
 
 	// add map objects
 
@@ -149,6 +152,56 @@ displace = function(num) {
 // bound the value to make sure its within bounds
 bound = function(value, bottom, top) {
 	return (value > top) ? top : (value < bottom) ? bottom : value;
+}
+
+MAP.createMesh = function() {
+    var geometry = new THREE.Geometry(),
+    count, c, tr, br, bl,
+    scale = 100,
+    color = new THREE.Color(),
+    normal = new THREE.Vector3(0, 1, 0);
+
+    var i, j;
+    for (i = 0; i < MAP.dimension; i += 1) {
+    for (j = 0; j < MAP.dimension; j += 1) {
+        c = MAP.map[i][j];
+        tr = MAP.map[i+1][j];
+        br = MAP.map[i+1][j+1];
+        bl = MAP.map[i][j+1];
+
+        geometry.vertices.push(new THREE.Vector3(i, c*64, j));
+        geometry.vertices.push(new THREE.Vector3(i+1, tr*64, j));
+        geometry.vertices.push(new THREE.Vector3(i+1, br*64, j+1));
+        geometry.vertices.push(new THREE.Vector3(i, bl*64, j+1));
+
+        color = MAP.colorFade(c);
+        geometry.colors.push(color);
+        geometry.colors.push(color);
+        geometry.colors.push(color);
+        geometry.colors.push(color);
+
+        count = (j+i*(MAP.dimension))*4;
+        geometry.faces.push(new THREE.Face3(count, count+2, count+1, normal, color));
+        geometry.faces.push(new THREE.Face3(count+3, count+2, count, normal, color));
+    }
+    }
+    var material = new THREE.MeshLambertMaterial({
+        wireframe: false,
+        wireframeLinewidth: 3,
+        vertexColors: THREE.VertexColors,
+        shading: THREE.SmoothShading
+    });
+    geometry.mergeVertices();
+    geometry.computeFaceNormals();
+    geometry.computeVertexNormals();
+    MAP.map.mesh = new THREE.Mesh(geometry, material);
+    MAP.map.mesh.scale.set(scale, scale, scale);
+    MAP.map.mesh.position.set(-scale*MAP.dimension/2, -scale*.3, -scale*MAP.dimension/2);
+
+}
+
+MAP.getHeight = function(x, z) {
+	return MAP.map[x][z];
 }
 
 // colormap colors
