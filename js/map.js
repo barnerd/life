@@ -1,26 +1,96 @@
 var MAP = MAP || {};
 
-MAP.createMap = function() {
+MAP.dimension = 128;
+MAP.scale = 64;
+
+MAP.updateMap = function (x, z, scene) {
 	// check to see if map section is already created
+	var plot = MAP.XZToPlot(x, z), newPlot;
+	var str = plot.split(','),
+	plotX = parseInt(str[0]),
+	plotZ = parseInt(str[1]);
 
-	// create height map
-	MAP.createHeightMap(128, .75);
-console.log("map created:" + (Date.now() - LIFE._lastFrameTime));
+	if(typeof MAP.map === "undefined") {
+		MAP.map = [];
+	}
 
-	// post-process height map
-	MAP.createMesh();
-console.log("map mesh:" + (Date.now() - LIFE._lastFrameTime));
+	var i, j;
+	for(i=plotX-1;i<=plotX+1;i++) {
+	for(j=plotZ-1;j<=plotZ+1;j++) {
+		newPlot = i+','+j;
+		if(typeof MAP.map[newPlot] === "undefined") {
+			console.log(newPlot);
+			MAP.map[newPlot] = {};
+			MAP.createMap(newPlot);
+			scene.add(MAP.map[newPlot].mesh)
 
-	// add map objects
+			// remove a mesh so there's only 9
+		}
+	}
+	}
 
 	return MAP.map;
+}
+
+MAP.createMap = function(plot) {
+	// create height map
+	MAP.map[plot].heightMap = MAP.createHeightMap(plot, MAP.dimension, .75);
+//console.log("map created:" + (Date.now() - LIFE._lastFrameTime));
+
+	// post-process height map
+	MAP.map[plot].mesh = MAP.createMesh(plot, MAP.map[plot].heightMap);
+//console.log("map mesh:" + (Date.now() - LIFE._lastFrameTime));
+
+	// add map objects
 };
 
-MAP.createHeightMap = function(mapDimension, roughness) {
+MAP.createHeightMap = function(plot, mapDimension, roughness) {
 	MAP.dimension = mapDimension;
 	MAP.roughness = roughness;
-	MAP.map = create2DArray(MAP.dimension+1, MAP.dimension+1);
-	MAP.startDisplacement(MAP.dimension);
+	var map = create2DArray(MAP.dimension+1, MAP.dimension+1);
+
+	// match boundaries
+	var plot = plot.split(','),
+	plotX = parseInt(plot[0]),
+	plotZ = parseInt(plot[1]);
+
+	var newPlot;
+
+	// to the left
+	newPlot = plotX+','+(plotZ-1);
+	if(typeof MAP.map[newPlot] !== "undefined") {
+		for(var i=MAP.dimension;i>=0;i--) {
+			map[i][0] = MAP.map[newPlot].heightMap[i][MAP.dimension];
+		}
+	}
+
+	// to the right
+	newPlot = plotX+','+(plotZ+1);
+	if(typeof MAP.map[newPlot] !== "undefined") {
+		for(var i=MAP.dimension;i>=0;i--) {
+			map[i][MAP.dimension] = MAP.map[newPlot].heightMap[i][0];
+		}
+	}
+
+	// to the forward
+	newPlot = (plotX+1)+','+plotZ;
+	if(typeof MAP.map[newPlot] !== "undefined") {
+		for(var i=MAP.dimension;i>=0;i--) {
+			map[MAP.dimension][i] = MAP.map[newPlot].heightMap[0][i];
+		}
+	}
+
+	// to the back
+	newPlot = (plotX-1)+','+plotZ;
+	if(typeof MAP.map[newPlot] !== "undefined") {
+		for(var i=MAP.dimension;i>=0;i--) {
+			map[0][i] = MAP.map[newPlot].heightMap[MAP.dimension][i];
+		}
+	}
+
+	MAP.startDisplacement(map, MAP.dimension);
+
+	return map;
 };
 
 // Setup the map array for use
@@ -31,35 +101,43 @@ create2DArray = function(d1, d2) {
 	for (i = 0; i < d1; i += 1) {
 		x[i] = new Array(d2);
 		for (j = 0; j < d2; j += 1) {
-			x[i][j] = 0;
+			x[i][j] = -1;
 		}
 	}
 	return x;
 };
 
 // Starts off the map generation, seeds the first 4 corners
-MAP.startDisplacement = function(mapDimension) {
+MAP.startDisplacement = function(map, mapDimension) {
 	var t, tr, tl, b, bl, br, r, l, center;
 
 	// top left
-	MAP.map[0][0] = Math.random(1.0);
-	tl = MAP.map[0][0];
+	if(map[0][0] == -1) {
+		map[0][0] = Math.random(1.0);
+	}
+	tl = map[0][0];
 
 	// bottom left
-	MAP.map[0][mapDimension] = Math.random(1.0);
-	bl = MAP.map[0][mapDimension];
+	if(map[0][mapDimension] == -1) {
+		map[0][mapDimension] = Math.random(1.0);
+	}
+	bl = map[0][mapDimension];
 
 	// top right
-	MAP.map[mapDimension][0] = Math.random(1.0);
-	tr = MAP.map[mapDimension][0];
+	if(map[mapDimension][0] == -1) {
+		map[mapDimension][0] = Math.random(1.0);
+	}
+	tr = map[mapDimension][0];
 
 	// bottom right
-	MAP.map[mapDimension][mapDimension] = Math.random(1.0);
-	br = MAP.map[mapDimension][mapDimension];
+	if(map[mapDimension][mapDimension] == -1) {
+		map[mapDimension][mapDimension] = Math.random(1.0);
+	}
+	br = map[mapDimension][mapDimension];
 
 	// Center
-	MAP.map[mapDimension / 2][mapDimension / 2] = (tl + bl + tr + br) / 4;
-	center = MAP.map[mapDimension / 2][mapDimension / 2];
+	map[mapDimension / 2][mapDimension / 2] = (tl + bl + tr + br) / 4;
+	center = map[mapDimension / 2][mapDimension / 2];
 
 	/* Non wrapping terrain */
 	/*map[mapDimension / 2][mapDimension] = bl + br + center / 3;
@@ -69,18 +147,27 @@ MAP.startDisplacement = function(mapDimension) {
 
 	/*Wrapping terrain */
 
-	MAP.map[mapDimension / 2][mapDimension] = (bl + br + center + center) / 4;
-	MAP.map[mapDimension / 2][0] = (tl + tr + center + center) / 4;
-	MAP.map[mapDimension][mapDimension / 2] = (tr + br + center + center) / 4;
-	MAP.map[0][mapDimension / 2] = (tl + bl + center + center) / 4;
-
+	if(map[mapDimension / 2][mapDimension]) {
+		map[mapDimension / 2][mapDimension] = (bl + br + center + center) / 4;
+	}
+	if(map[mapDimension / 2][0]) {
+		map[mapDimension / 2][0] = (tl + tr + center + center) / 4;
+	}
+	if(map[mapDimension][mapDimension / 2]) {
+		map[mapDimension][mapDimension / 2] = (tr + br + center + center) / 4;
+	}
+	if(map[0][mapDimension / 2]) {
+		map[0][mapDimension / 2] = (tl + bl + center + center) / 4;
+	}
 
 	// Call displacment
-	MAP.midpointDisplacment(mapDimension);
+	MAP.midpointDisplacment(map, mapDimension);
+
+	return map;
 };
 
 // Workhorse of the terrain generation.
-MAP.midpointDisplacment = function(dimension) {
+MAP.midpointDisplacment = function(map, dimension) {
 	var newDimension = dimension / 2,
 		t, tr, tl, b, bl, br, r, l, center,
 		i, j;
@@ -91,55 +178,64 @@ MAP.midpointDisplacment = function(dimension) {
 				x = i - (newDimension / 2);
 				y = j - (newDimension / 2);
 
-				tl = MAP.map[i - newDimension][j - newDimension];
-				tr = MAP.map[i][j - newDimension];
-				bl = MAP.map[i - newDimension][j];
-				br = MAP.map[i][j];
+				tl = map[i - newDimension][j - newDimension];
+				tr = map[i][j - newDimension];
+				bl = map[i - newDimension][j];
+				br = map[i][j];
 
 				// Center
-				MAP.map[x][y] = (tl + tr + bl + br) / 4 + displace(dimension);
-				MAP.map[x][y] = bound(MAP.map[x][y], 0, 1);
-				center = MAP.map[x][y];
+				if(map[x][y] == -1) {
+					map[x][y] = bound((tl + tr + bl + br) / 4 + displace(dimension), 0, 1);
+				}
+				center = map[x][y];
 
 				// Top
-				if(j - (newDimension * 2) + (newDimension / 2) > 0){
-					MAP.map[x][j - newDimension] = (tl + tr + center + MAP.map[x][j - dimension + (newDimension / 2)]) / 4 + displace(dimension);
-				}else{
-					MAP.map[x][j - newDimension] = (tl + tr + center) / 3 + displace(dimension);
+				if(map[x][j - newDimension] == -1) {
+					if(j - (newDimension * 2) + (newDimension / 2) > 0) {
+						map[x][j - newDimension] = (tl + tr + center + map[x][j - dimension + (newDimension / 2)]) / 4 + displace(dimension);
+					} else {
+						map[x][j - newDimension] = (tl + tr + center) / 3 + displace(dimension);
+					}
 				}
 
-				MAP.map[x][j - newDimension] = bound(MAP.map[x][j - newDimension], 0, 1);
+				map[x][j - newDimension] = bound(map[x][j - newDimension], 0, 1);
 
 				// Bottom
-				if(j + (newDimension / 2) < MAP.dimension){
-					MAP.map[x][j] = (bl + br + center + MAP.map[x][j + (newDimension / 2)]) / 4 + displace(dimension);
-				}else{
-					MAP.map[x][j] = (bl + br + center) / 3 + displace(dimension);
+				if(map[x][j] == -1) {
+					if(j + (newDimension / 2) < MAP.dimension && map[x][j + (newDimension / 2)] != -1) {
+						map[x][j] = (bl + br + center + map[x][j + (newDimension / 2)]) / 4 + displace(dimension);
+					} else {
+						map[x][j] = (bl + br + center) / 3 + displace(dimension);
+					}
 				}
 
-				MAP.map[x][j] = bound(MAP.map[x][j], 0, 1);
+				map[x][j] = bound(map[x][j], 0, 1);
 
 
 				// Right
-				if(i + (newDimension / 2) < MAP.dimension){
-					MAP.map[i][y] = (tr + br + center + MAP.map[i + (newDimension / 2)][y]) / 4 + displace(dimension);
-				}else{
-					MAP.map[i][y] = (tr + br + center) / 3 + displace(dimension);
+				if(map[i][y] == -1) {
+					if(i + (newDimension / 2) < MAP.dimension && map[i + (newDimension / 2)][y] != -1) {
+						map[i][y] = (tr + br + center + map[i + (newDimension / 2)][y]) / 4 + displace(dimension);
+					} else {
+						map[i][y] = (tr + br + center) / 3 + displace(dimension);
+					}
 				}
 
-				MAP.map[i][y] = bound(MAP.map[i][y], 0, 1);
+				map[i][y] = bound(map[i][y], 0, 1);
 
 				// Left
-				if(i - (newDimension * 2) + (newDimension / 2) > 0){
-					MAP.map[i - newDimension][y] = (tl + bl + center + MAP.map[i - dimension + (newDimension / 2)][y]) / 4 + displace(dimension);;
-				}else{
-					MAP.map[i - newDimension][y] = (tl + bl + center) / 3 + displace(dimension);
+				if(map[i - newDimension][y] == -1) {
+					if(i - (newDimension * 2) + (newDimension / 2) > 0 && map[i - dimension + (newDimension / 2)][y] != -1) {
+						map[i - newDimension][y] = (tl + bl + center + map[i - dimension + (newDimension / 2)][y]) / 4 + displace(dimension);;
+					} else {
+						map[i - newDimension][y] = (tl + bl + center) / 3 + displace(dimension);
+					}
 				}
 
-				MAP.map[i - newDimension][y] = bound(MAP.map[i - newDimension][y], 0, 1);
+				map[i - newDimension][y] = bound(map[i - newDimension][y], 0, 1);
 			}
 		}
-		MAP.midpointDisplacment(newDimension);
+		MAP.midpointDisplacment(map, newDimension);
 	}
 };
 
@@ -154,25 +250,28 @@ bound = function(value, bottom, top) {
 	return (value > top) ? top : (value < bottom) ? bottom : value;
 }
 
-MAP.createMesh = function() {
+MAP.createMesh = function(plot, heightMap) {
     var geometry = new THREE.Geometry(),
     count, c, tr, br, bl,
-    scale = 100,
     color = new THREE.Color(),
     normal = new THREE.Vector3(0, 1, 0);
+
+    var plot = plot.split(','),
+	plotX = parseInt(plot[0]),
+	plotZ = parseInt(plot[1]);
 
     var i, j;
     for (i = 0; i < MAP.dimension; i += 1) {
     for (j = 0; j < MAP.dimension; j += 1) {
-        c = MAP.map[i][j];
-        tr = MAP.map[i+1][j];
-        br = MAP.map[i+1][j+1];
-        bl = MAP.map[i][j+1];
+        c = heightMap[i][j];
+        tr = heightMap[i+1][j] * MAP.scale;
+        br = heightMap[i+1][j+1] * MAP.scale;
+        bl = heightMap[i][j+1] * MAP.scale;
 
-        geometry.vertices.push(new THREE.Vector3(i, c*64, j));
-        geometry.vertices.push(new THREE.Vector3(i+1, tr*64, j));
-        geometry.vertices.push(new THREE.Vector3(i+1, br*64, j+1));
-        geometry.vertices.push(new THREE.Vector3(i, bl*64, j+1));
+        geometry.vertices.push(new THREE.Vector3(plotX * MAP.dimension + i, c * MAP.scale, plotZ * MAP.dimension + j));
+        geometry.vertices.push(new THREE.Vector3(plotX * MAP.dimension + i + 1, tr, plotZ * MAP.dimension + j));
+        geometry.vertices.push(new THREE.Vector3(plotX * MAP.dimension + i + 1, br, plotZ * MAP.dimension + j + 1));
+        geometry.vertices.push(new THREE.Vector3(plotX * MAP.dimension + i, bl, plotZ * MAP.dimension + j + 1));
 
         color = MAP.colorFade(c);
         geometry.colors.push(color);
@@ -185,23 +284,40 @@ MAP.createMesh = function() {
         geometry.faces.push(new THREE.Face3(count+3, count+2, count, normal, color));
     }
     }
+    geometry.mergeVertices();
+    geometry.computeFaceNormals();
+    geometry.computeVertexNormals();
+    geometry.name = 'map_' + plot;
+
     var material = new THREE.MeshLambertMaterial({
         wireframe: false,
         wireframeLinewidth: 3,
         vertexColors: THREE.VertexColors,
         shading: THREE.SmoothShading
     });
-    geometry.mergeVertices();
-    geometry.computeFaceNormals();
-    geometry.computeVertexNormals();
-    MAP.map.mesh = new THREE.Mesh(geometry, material);
-    MAP.map.mesh.scale.set(scale, scale, scale);
-    MAP.map.mesh.position.set(-scale*MAP.dimension/2, -scale*.3, -scale*MAP.dimension/2);
+    var mesh = new THREE.Mesh(geometry, material);
+    mesh.scale.set(MAP.scale, MAP.scale, MAP.scale);
 
+    return mesh;
 }
 
 MAP.getHeight = function(x, z) {
-	return MAP.map[x][z];
+	var plot = MAP.XZToPlot(x, z);
+
+	x = Math.floor((x/MAP.scale) % MAP.dimension);
+	x = (x >= 0) ? x : x + MAP.dimension;
+	z = Math.floor((z/MAP.scale) % MAP.dimension);
+	z = (z >= 0) ? z : z + MAP.dimension;
+
+	return MAP.map[plot].heightMap[x][z] * MAP.scale * MAP.scale;
+}
+
+MAP.XZToPlot = function(x, z){
+	x = Math.floor(x / MAP.scale / MAP.dimension);
+	z = Math.floor(z / MAP.scale / MAP.dimension);
+	var plot = x + ',' + z;
+
+	return plot;
 }
 
 // colormap colors
