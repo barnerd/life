@@ -11,20 +11,26 @@ MAP.updateMap = function (x, z, scene) {
 	plotZ = parseInt(str[1]);
 
 	if(typeof MAP.map === "undefined") {
-		MAP.map = [];
+		MAP.map = {};
 	}
 
-	var i, j;
-	for(i=plotX-1;i<=plotX+1;i++) {
-	for(j=plotZ-1;j<=plotZ+1;j++) {
-		newPlot = i+','+j;
-		if(typeof MAP.map[newPlot] === "undefined") {
-			console.log(newPlot);
-			MAP.map[newPlot] = {};
-			MAP.createMap(newPlot);
+	var i, j, radius = 2;
+	for(i=-radius;i<=radius;i++) {
+	for(j=-radius;j<=radius;j++) {
+		newPlot = (i+plotX)+','+(j+plotZ);
+		if(i<radius && i>-radius && j<radius && j>-radius) {
+			if(typeof MAP.map[newPlot] === "undefined") {
+				MAP.map[newPlot] = {};
+var startTime = Date.now();
+				MAP.createMap(newPlot);
+console.log(newPlot+' created in '+(Date.now() - startTime));
+			}
 			scene.add(MAP.map[newPlot].mesh)
-
-			// remove a mesh so there's only 9
+		}
+		else {
+			if(typeof MAP.map[newPlot] !== "undefined") {
+				scene.remove(MAP.map[newPlot].mesh);
+			}
 		}
 	}
 	}
@@ -248,7 +254,7 @@ displace = function(num) {
 // bound the value to make sure its within bounds
 bound = function(value, bottom, top) {
 	return (value > top) ? top : (value < bottom) ? bottom : value;
-}
+};
 
 MAP.createMesh = function(plot, heightMap) {
     var geometry = new THREE.Geometry(),
@@ -287,7 +293,6 @@ MAP.createMesh = function(plot, heightMap) {
     geometry.mergeVertices();
     geometry.computeFaceNormals();
     geometry.computeVertexNormals();
-    geometry.name = 'map_' + plot;
 
     var material = new THREE.MeshLambertMaterial({
         wireframe: false,

@@ -48,7 +48,7 @@ LIFE.init = function() {
     document.body.appendChild(LIFE.renderer.domElement);
 
     LIFE.controls = new THREE.FirstPersonControls(LIFE.camera, LIFE.renderer.domElement);
-    LIFE.controls.lookSpeed = 0.00008;
+    LIFE.controls.lookSpeed = 0.0001;
     LIFE.controls.movementSpeed = 1.0;
 
     // TODO: Add Intro screen with start button
