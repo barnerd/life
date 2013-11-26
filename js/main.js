@@ -53,8 +53,12 @@ LIFE.init = function() {
     document.body.appendChild(LIFE.renderer.domElement);
 
     LIFE.controls = new THREE.FirstPersonControls(LIFE.camera, LIFE.renderer.domElement);
+<<<<<<< HEAD
     LIFE.controls.lookSpeed = 0.00008;
 <<<<<<< HEAD
+=======
+    LIFE.controls.lookSpeed = 0.0001;
+>>>>>>> 0.0.4-map-improvements
     LIFE.controls.movementSpeed = 1.0;
 =======
     LIFE.controls.movementSpeed = 2.0;
