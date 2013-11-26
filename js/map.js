@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 var MAP = MAP || {};
 
 MAP.dimension = 128;
@@ -98,28 +97,6 @@ MAP.createHeightMap = function(plot, mapDimension, roughness) {
 	MAP.startDisplacement(map, MAP.dimension);
 
 	return map;
-=======
-var MAP = {};
-
-MAP.createMap = function() {
-	// check to see if map section is already created
-
-	// create height map
-	MAP.createHeightMap(128, .75);
-
-	// post-process height map
-
-	// add map objects
-
-	return MAP.map;
-};
-
-MAP.createHeightMap = function(mapDimension, roughness) {
-	MAP.dimension = mapDimension;
-	MAP.roughness = roughness;
-	MAP.map = create2DArray(MAP.dimension+1, MAP.dimension+1);
-	MAP.startDisplacement(MAP.dimension);
->>>>>>> parent of d4b241d... Remove JS files
 };
 
 // Setup the map array for use
@@ -130,18 +107,13 @@ create2DArray = function(d1, d2) {
 	for (i = 0; i < d1; i += 1) {
 		x[i] = new Array(d2);
 		for (j = 0; j < d2; j += 1) {
-<<<<<<< HEAD
 			x[i][j] = -1;
-=======
-			x[i][j] = 0;
->>>>>>> parent of d4b241d... Remove JS files
 		}
 	}
 	return x;
 };
 
 // Starts off the map generation, seeds the first 4 corners
-<<<<<<< HEAD
 MAP.startDisplacement = function(map, mapDimension) {
 	var t, tr, tl, b, bl, br, r, l, center;
 
@@ -172,30 +144,6 @@ MAP.startDisplacement = function(map, mapDimension) {
 	// Center
 	map[mapDimension / 2][mapDimension / 2] = (tl + bl + tr + br) / 4;
 	center = map[mapDimension / 2][mapDimension / 2];
-=======
-MAP.startDisplacement = function(mapDimension) {
-	var t, tr, tl, b, bl, br, r, l, center;
-
-	// top left
-	MAP.map[0][0] = Math.random(1.0);
-	tl = MAP.map[0][0];
-
-	// bottom left
-	MAP.map[0][mapDimension] = Math.random(1.0);
-	bl = MAP.map[0][mapDimension];
-
-	// top right
-	MAP.map[mapDimension][0] = Math.random(1.0);
-	tr = MAP.map[mapDimension][0];
-
-	// bottom right
-	MAP.map[mapDimension][mapDimension] = Math.random(1.0);
-	br = MAP.map[mapDimension][mapDimension];
-
-	// Center
-	MAP.map[mapDimension / 2][mapDimension / 2] = (tl + bl + tr + br) / 4;
-	center = MAP.map[mapDimension / 2][mapDimension / 2];
->>>>>>> parent of d4b241d... Remove JS files
 
 	/* Non wrapping terrain */
 	/*map[mapDimension / 2][mapDimension] = bl + br + center / 3;
@@ -205,7 +153,6 @@ MAP.startDisplacement = function(mapDimension) {
 
 	/*Wrapping terrain */
 
-<<<<<<< HEAD
 	if(map[mapDimension / 2][mapDimension]) {
 		map[mapDimension / 2][mapDimension] = (bl + br + center + center) / 4;
 	}
@@ -227,20 +174,6 @@ MAP.startDisplacement = function(mapDimension) {
 
 // Workhorse of the terrain generation.
 MAP.midpointDisplacment = function(map, dimension) {
-=======
-	MAP.map[mapDimension / 2][mapDimension] = (bl + br + center + center) / 4;
-	MAP.map[mapDimension / 2][0] = (tl + tr + center + center) / 4;
-	MAP.map[mapDimension][mapDimension / 2] = (tr + br + center + center) / 4;
-	MAP.map[0][mapDimension / 2] = (tl + bl + center + center) / 4;
-
-
-	// Call displacment
-	MAP.midpointDisplacment(mapDimension);
-};
-
-// Workhorse of the terrain generation.
-MAP.midpointDisplacment = function(dimension) {
->>>>>>> parent of d4b241d... Remove JS files
 	var newDimension = dimension / 2,
 		t, tr, tl, b, bl, br, r, l, center,
 		i, j;
@@ -251,7 +184,6 @@ MAP.midpointDisplacment = function(dimension) {
 				x = i - (newDimension / 2);
 				y = j - (newDimension / 2);
 
-<<<<<<< HEAD
 				tl = map[i - newDimension][j - newDimension];
 				tr = map[i][j - newDimension];
 				bl = map[i - newDimension][j];
@@ -310,57 +242,6 @@ MAP.midpointDisplacment = function(dimension) {
 			}
 		}
 		MAP.midpointDisplacment(map, newDimension);
-=======
-				tl = MAP.map[i - newDimension][j - newDimension];
-				tr = MAP.map[i][j - newDimension];
-				bl = MAP.map[i - newDimension][j];
-				br = MAP.map[i][j];
-
-				// Center
-				MAP.map[x][y] = (tl + tr + bl + br) / 4 + displace(dimension);
-				MAP.map[x][y] = bound(MAP.map[x][y], 0, 1);
-				center = MAP.map[x][y];
-
-				// Top
-				if(j - (newDimension * 2) + (newDimension / 2) > 0){
-					MAP.map[x][j - newDimension] = (tl + tr + center + MAP.map[x][j - dimension + (newDimension / 2)]) / 4 + displace(dimension);
-				}else{
-					MAP.map[x][j - newDimension] = (tl + tr + center) / 3 + displace(dimension);
-				}
-
-				MAP.map[x][j - newDimension] = bound(MAP.map[x][j - newDimension], 0, 1);
-
-				// Bottom
-				if(j + (newDimension / 2) < MAP.dimension){
-					MAP.map[x][j] = (bl + br + center + MAP.map[x][j + (newDimension / 2)]) / 4 + displace(dimension);
-				}else{
-					MAP.map[x][j] = (bl + br + center) / 3 + displace(dimension);
-				}
-
-				MAP.map[x][j] = bound(MAP.map[x][j], 0, 1);
-
-
-				// Right
-				if(i + (newDimension / 2) < MAP.dimension){
-					MAP.map[i][y] = (tr + br + center + MAP.map[i + (newDimension / 2)][y]) / 4 + displace(dimension);
-				}else{
-					MAP.map[i][y] = (tr + br + center) / 3 + displace(dimension);
-				}
-
-				MAP.map[i][y] = bound(MAP.map[i][y], 0, 1);
-
-				// Left
-				if(i - (newDimension * 2) + (newDimension / 2) > 0){
-					MAP.map[i - newDimension][y] = (tl + bl + center + MAP.map[i - dimension + (newDimension / 2)][y]) / 4 + displace(dimension);;
-				}else{
-					MAP.map[i - newDimension][y] = (tl + bl + center) / 3 + displace(dimension);
-				}
-
-				MAP.map[i - newDimension][y] = bound(MAP.map[i - newDimension][y], 0, 1);
-			}
-		}
-		MAP.midpointDisplacment(newDimension);
->>>>>>> parent of d4b241d... Remove JS files
 	}
 };
 
@@ -375,7 +256,6 @@ bound = function(value, bottom, top) {
 	return (value > top) ? top : (value < bottom) ? bottom : value;
 };
 
-<<<<<<< HEAD
 MAP.createMesh = function(plot, heightMap) {
     var geometry = new THREE.Geometry(),
     count, c, tr, br, bl,
@@ -445,8 +325,6 @@ MAP.XZToPlot = function(x, z){
 	return plot;
 }
 
-=======
->>>>>>> parent of d4b241d... Remove JS files
 // colormap colors
 MAP.COLORS = 
 	{water:{start:{r:39, g:50, b:63},
