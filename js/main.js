@@ -40,7 +40,7 @@ LIFE.init = function() {
     // Create a camera, zoom it out from the model a bit, and add it to the scene.
     LIFE.camera = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 20000);
     LIFE.camera.position.set(0, 64*64, 0);
-    LIFE.camera.lookAt(1, 64*64, 0);
+    LIFE.camera.lookAt(0, 64*64, 1);
     LIFE.scene.add(LIFE.camera);
 
     // Render the scene.
@@ -66,12 +66,12 @@ LIFE.start = function() {
 LIFE.createScene = function() {
     // add subtle blue ambient lighting
     LIFE.ambientLight = new THREE.AmbientLight(0xffffff);
-    LIFE.scene.add(LIFE.ambientLight);
+    //LIFE.scene.add(LIFE.ambientLight);
 
     // directional lighting
     LIFE.directionalLight = new THREE.DirectionalLight(0xffffff);
     LIFE.directionalLight.position.set(0, 10000, 0).normalize();
-    //LIFE.scene.add(LIFE.directionalLight);
+    LIFE.scene.add(LIFE.directionalLight);
 
     console.log("start:" + (Date.now() - LIFE._lastFrameTime));
     LIFE.map = MAP.updateMap(LIFE.controls.object.position.x, LIFE.controls.object.position.z, LIFE.scene);
@@ -86,8 +86,8 @@ LIFE.animate = function() {
     var frameTimeDelta = time - LIFE._lastFrameTime;
 
     LIFE.controls.update(frameTimeDelta);
-LIFE.controls.object.position.y = MAP.getHeight(LIFE.controls.object.position.x, LIFE.controls.object.position.z) + 100;
-    LIFE.map = MAP.updateMap(LIFE.controls.object.position.x, LIFE.controls.object.position.z, LIFE.scene);
+//LIFE.controls.object.position.y = MAP.getHeight(LIFE.controls.object.position.x, LIFE.controls.object.position.z) + 100;
+    //LIFE.map = MAP.updateMap(LIFE.controls.object.position.x, LIFE.controls.object.position.z, LIFE.scene);
     LIFE.renderer.render(LIFE.scene, LIFE.camera);
 
     LIFE._lastFrameTime = time;
