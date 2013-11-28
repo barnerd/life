@@ -50,6 +50,7 @@ LIFE.init = function() {
     LIFE.controls = new THREE.FirstPersonControls(LIFE.camera, LIFE.renderer.domElement);
     LIFE.controls.lookSpeed = 0.0001;
     LIFE.controls.movementSpeed = 1.0;
+    LIFE.controls.movementSpeed = 10.0;
 
     // TODO: Add Intro screen with start button
     LIFE.start();
@@ -74,10 +75,12 @@ LIFE.createScene = function() {
     LIFE.scene.add(LIFE.directionalLight);
 
     console.log("start:" + (Date.now() - LIFE._lastFrameTime));
-    LIFE.map = MAP.updateMap(LIFE.controls.object.position.x, LIFE.controls.object.position.z, LIFE.scene);
+    LIFE.map = MAP.updateMap(LIFE.controls.object.position.x, LIFE.controls.object.position.z);
+    LIFE.scene.add(LIFE.map.mesh);
 
+var startTime = Date.now();
     LIFE.renderer.render(LIFE.scene, LIFE.camera);
-    console.log("map drawn:" + (Date.now() - LIFE._lastFrameTime));
+console.log("map drawn in " + (Date.now() - startTime));
 };
 
  // Renders the scene and updates the render as needed.

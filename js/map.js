@@ -3,24 +3,48 @@ var MAP = MAP || {};
 MAP.dimension = 128;
 MAP.scale = 64;
 
-MAP.updateMap = function (x, z, scene) {
+MAP.updateMap = function (x, z) {
 	// check to see if map section is already created
-	var plot = MAP.XZToPlot(x, z), newPlot;
-	var str = plot.split(','),
+	var plot = MAP.XZToPlot(x, z), newPlot,
+	str = plot.split(','),
 	plotX = parseInt(str[0]),
-	plotZ = parseInt(str[1]);
+	plotZ = parseInt(str[1]),
+	geometry = new THREE.Geometry(),
+	meshes = [];
 
 	if(typeof MAP.map === "undefined") {
 		MAP.map = {};
 	}
 
-	if(typeof MAP.map[plot] === "undefined") {
-		MAP.map[plot] = {};
+	var i, j, radius = 1;
+	for(i=-radius;i<=radius;i++) {
+	for(j=-radius;j<=radius;j++) {
+	    newPlot = (i+plotX)+','+(j+plotZ);
+        if(typeof MAP.map[newPlot] === "undefined") {
+    		MAP.map[newPlot] = {};
 var startTime = Date.now();
-		MAP.createMap(plot);
-console.log(plot+' created in '+(Date.now() - startTime));
+			MAP.createMap(newPlot);
+console.log(newPlot+' created in '+(Date.now() - startTime));
+		}
+		meshes.push(MAP.map[newPlot].mesh);
 	}
-	scene.add(MAP.map[plot].mesh)
+	}
+
+	THREE.GeometryUtils.merge(geometry, meshes[0]);
+	for(i=meshes.length-1;i>0;i--) {
+var startTime = Date.now();
+		THREE.GeometryUtils.merge(geometry, meshes[i]);
+console.log(meshes[i].geometry.name+' merged in '+(Date.now() - startTime));
+	}
+
+	MAP.map.material = new THREE.MeshLambertMaterial({
+		vertexColors: true,
+		wireframe: false,
+	    shading: THREE.SmoothShading,
+	    //overdraw: true
+	});
+
+	MAP.map.mesh = new THREE.Mesh(geometry, MAP.map.material);
 
 	return MAP.map;
 }
@@ -31,14 +55,13 @@ MAP.createMap = function(plot) {
 		MAP.dimension*MAP.scale, MAP.dimension*MAP.scale,	// Width and Height
 		MAP.dimension, MAP.dimension						// Terrain resolution
 	);
+	MAP.map[plot].geometry.name = 'map_'+plot;
 	MAP.map[plot].geometry.dynamic = true;
 
 	MAP.createHeightMap(plot);
-//console.log("map created:" + (Date.now() - LIFE._lastFrameTime));
 
 	// post-process height map
 	MAP.createMesh(plot);
-//console.log("map mesh:" + (Date.now() - LIFE._lastFrameTime));
 
 	// add map objects
 };
@@ -254,7 +277,10 @@ bound = function(value, bottom, top) {
 };
 
 MAP.createMesh = function(plot) {
-	var c, color, vertex;
+	var c, color, vertex,
+	str = plot.split(','),
+	plotX = parseInt(str[0]),
+	plotZ = parseInt(str[1]);
 
 	MAP.map[plot].geometry.mergeVertices();
 	MAP.map[plot].geometry.computeVertexNormals();
@@ -276,16 +302,18 @@ MAP.createMesh = function(plot) {
     MAP.map[plot].geometry.colorsNeedUpdate = true;
     MAP.map[plot].geometry.computeVertexNormals();
 	MAP.map[plot].geometry.computeFaceNormals();
-    
-    var material = new THREE.MeshLambertMaterial({
-    	vertexColors: true,
-    	wireframe: false,
-        shading: THREE.SmoothShading,
-        //overdraw: true
-    });
-    MAP.map[plot].mesh = new THREE.Mesh(MAP.map[plot].geometry, material);
+
+	MAP.map[plot].material = new THREE.MeshLambertMaterial({
+		vertexColors: true,
+		wireframe: false,
+	    shading: THREE.SmoothShading,
+	    //overdraw: true
+	});
+	MAP.map[plot].mesh = new THREE.Mesh(MAP.map[plot].geometry, MAP.map[plot].material);
 	MAP.map[plot].mesh.rotation.x = -Math.PI / 2;
 	MAP.map[plot].mesh.scale.z = MAP.scale * MAP.scale;
+	MAP.map[plot].mesh.position.x = plotZ*MAP.dimension*MAP.scale;
+	MAP.map[plot].mesh.position.z = plotX*MAP.dimension*MAP.scale;
 };
 
 MAP.getHeight = function(x, z) {
