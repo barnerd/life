@@ -16,35 +16,40 @@ MAP.updateMap = function (x, z) {
 		MAP.map = {};
 	}
 
-	var i, j, radius = 1;
-	for(i=-radius;i<=radius;i++) {
-	for(j=-radius;j<=radius;j++) {
-	    newPlot = (i+plotX)+','+(j+plotZ);
-        if(typeof MAP.map[newPlot] === "undefined") {
-    		MAP.map[newPlot] = {};
-var startTime = Date.now();
-			MAP.createMap(newPlot);
-console.log(newPlot+' created in '+(Date.now() - startTime));
+	if(MAP.center != plot) {
+		var i, j, radius = 1;
+		for(i=-radius;i<=radius;i++) {
+		for(j=-radius;j<=radius;j++) {
+		    newPlot = (i+plotX)+','+(j+plotZ);
+	        if(typeof MAP.map[newPlot] === "undefined") {
+	    		MAP.map[newPlot] = {};
+	var startTime = Date.now();
+				MAP.createMap(newPlot);
+	console.log(newPlot+' created in '+(Date.now() - startTime));
+				meshes.push(MAP.map[newPlot].mesh);
+			}
 		}
-		meshes.push(MAP.map[newPlot].mesh);
-	}
-	}
+		}
 
-	THREE.GeometryUtils.merge(geometry, meshes[0]);
-	for(i=meshes.length-1;i>0;i--) {
+		if(meshes.length > 0) {
+			THREE.GeometryUtils.merge(geometry, meshes[0]);
+		}
+		for(i=meshes.length-1;i>0;i--) {
 var startTime = Date.now();
-		THREE.GeometryUtils.merge(geometry, meshes[i]);
+			THREE.GeometryUtils.merge(geometry, meshes[i]);
 console.log(meshes[i].geometry.name+' merged in '+(Date.now() - startTime));
+		}
+
+		MAP.map.material = new THREE.MeshLambertMaterial({
+			vertexColors: true,
+			wireframe: false,
+		    shading: THREE.SmoothShading,
+		    //overdraw: true
+		});
+
+		MAP.map.mesh = new THREE.Mesh(geometry, MAP.map.material);
+		MAP.center = plot;
 	}
-
-	MAP.map.material = new THREE.MeshLambertMaterial({
-		vertexColors: true,
-		wireframe: false,
-	    shading: THREE.SmoothShading,
-	    //overdraw: true
-	});
-
-	MAP.map.mesh = new THREE.Mesh(geometry, MAP.map.material);
 
 	return MAP.map;
 }

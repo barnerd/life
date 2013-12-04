@@ -90,7 +90,7 @@ LIFE.animate = function() {
 
     LIFE.controls.update(frameTimeDelta);
 //LIFE.controls.object.position.y = MAP.getHeight(LIFE.controls.object.position.x, LIFE.controls.object.position.z) + 100;
-    //LIFE.map = MAP.updateMap(LIFE.controls.object.position.x, LIFE.controls.object.position.z, LIFE.scene);
+    LIFE.map = MAP.updateMap(LIFE.controls.object.position.x, LIFE.controls.object.position.z);
     LIFE.renderer.render(LIFE.scene, LIFE.camera);
 
     LIFE._lastFrameTime = time;
