@@ -11,7 +11,7 @@ MAP.updateMap = function (x, z) {
 	str = plot.split(','),
 	plotX = parseInt(str[0]),
 	plotZ = parseInt(str[1]),
-	geometry = new THREE.Geometry(),
+	geometry = new THREE.Geometry();
 	geometries = [];
 
 	if(typeof MAP.map === "undefined") {
@@ -39,8 +39,9 @@ var startTime = Date.now();
 				MAP.createMap(newPlot);
 				MAP.numPlots++;
 console.log(newPlot+' created in '+(Date.now() - startTime));
+
+				geometries.push(MAP.map[newPlot].geometry);
 			}
-			geometries.push(MAP.map[newPlot].geometry);
 		}
 		}
 
@@ -57,7 +58,10 @@ console.log(geometries[i].name+' merged in '+(Date.now() - startTime));
 		geometry.computeVertexNormals();
 		geometry.computeFaceNormals();
 
-		MAP.map.mesh.geometry = geometry;
+		if(MAP.numPlots < 10) {
+			MAP.map.mesh.geometry = geometry;
+			console.log("geometry added");
+		}
 		MAP.center = plot;
 	}
 
@@ -301,8 +305,6 @@ MAP.createMesh = function(plot) {
 	plotZ = parseInt(str[1]);
 
 	MAP.map[plot].geometry.mergeVertices();
-	MAP.map[plot].geometry.computeVertexNormals();
-	MAP.map[plot].geometry.computeFaceNormals();
 
 	for (var i = 0; i < MAP.map[plot].geometry.vertices.length; i++) {
 		c = MAP.map[plot].geometry.vertices[i].y;
@@ -318,8 +320,6 @@ MAP.createMesh = function(plot) {
     }
 
     MAP.map[plot].geometry.colorsNeedUpdate = true;
-    MAP.map[plot].geometry.computeVertexNormals();
-	MAP.map[plot].geometry.computeFaceNormals();
 
 	var translation = new THREE.Matrix4().makeTranslation(plotZ*MAP.dimension, 0, plotX*MAP.dimension);
 	var matrix = new THREE.Matrix4();
