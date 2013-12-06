@@ -2,6 +2,7 @@ var MAP = MAP || {};
 
 MAP.dimension = 128;
 MAP.scale = 64;
+MAP.scaleMatrix = new THREE.Matrix4().makeScale(MAP.scale, MAP.scale * MAP.scale, MAP.scale);
 MAP.numPlots = 0;
 
 MAP.updateMap = function (x, z) {
@@ -11,10 +12,20 @@ MAP.updateMap = function (x, z) {
 	plotX = parseInt(str[0]),
 	plotZ = parseInt(str[1]),
 	geometry = new THREE.Geometry(),
-	meshes = [];
+	geometries = [];
 
 	if(typeof MAP.map === "undefined") {
 		MAP.map = {};
+
+		MAP.map.material = new THREE.MeshLambertMaterial({
+			vertexColors: true,
+			wireframe: false,
+		    shading: THREE.SmoothShading,
+		    //overdraw: true
+		});
+
+		MAP.map.mesh = new THREE.Mesh();
+		MAP.map.mesh.material = MAP.map.material;
 	}
 
 	if(MAP.center != plot) {
@@ -27,30 +38,26 @@ MAP.updateMap = function (x, z) {
 var startTime = Date.now();
 				MAP.createMap(newPlot);
 				MAP.numPlots++;
-console.log('numPlots='+MAP.numPlots);
 console.log(newPlot+' created in '+(Date.now() - startTime));
 			}
-			meshes.push(MAP.map[newPlot].mesh);
+			geometries.push(MAP.map[newPlot].geometry);
 		}
 		}
 
-		if(meshes.length > 0) {
-			THREE.GeometryUtils.merge(geometry, meshes[0]);
+		if(geometries.length > 0) {
+			THREE.GeometryUtils.merge(geometry, geometries[0]);
 		}
-		for(i=meshes.length-1;i>0;i--) {
+		for(i=geometries.length-1;i>0;i--) {
 var startTime = Date.now();
-			THREE.GeometryUtils.merge(geometry, meshes[i]);
-console.log(meshes[i].geometry.name+' merged in '+(Date.now() - startTime));
+			THREE.GeometryUtils.merge(geometry, geometries[i]);
+console.log(geometries[i].name+' merged in '+(Date.now() - startTime));
 		}
 
-		MAP.map.material = new THREE.MeshLambertMaterial({
-			vertexColors: true,
-			wireframe: false,
-		    shading: THREE.SmoothShading,
-		    //overdraw: true
-		});
+		geometry.mergeVertices();
+		geometry.computeVertexNormals();
+		geometry.computeFaceNormals();
 
-		MAP.map.mesh = new THREE.Mesh(geometry, MAP.map.material);
+		MAP.map.mesh.geometry = geometry;
 		MAP.center = plot;
 	}
 
@@ -59,13 +66,6 @@ console.log(meshes[i].geometry.name+' merged in '+(Date.now() - startTime));
 
 MAP.createMap = function(plot) {
 	// create height map
-	MAP.map[plot].geometry = new THREE.PlaneGeometry(
-		MAP.dimension*MAP.scale, MAP.dimension*MAP.scale,	// Width and Height
-		MAP.dimension, MAP.dimension						// Terrain resolution
-	);
-	MAP.map[plot].geometry.name = 'map_'+plot;
-	MAP.map[plot].geometry.dynamic = true;
-
 	MAP.createHeightMap(plot);
 
 	// post-process height map
@@ -75,8 +75,18 @@ MAP.createMap = function(plot) {
 };
 
 MAP.createHeightMap = function(plot) {
+	// init PlaneGeometry
+	MAP.map[plot].geometry = new THREE.PlaneGeometry(
+		MAP.dimension, MAP.dimension,	// Width and Height
+		MAP.dimension, MAP.dimension	// Terrain resolution
+	);
+	MAP.map[plot].geometry.name = 'map_'+plot;
+	MAP.map[plot].geometry.dynamic = true;
+	MAP.map[plot].geometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
+
+	// set to -1 to track what's been changed
 	for (var i = MAP.map[plot].geometry.vertices.length - 1; i >= 0; i--) {
-		MAP.map[plot].geometry.vertices[i].z = -1;
+		MAP.map[plot].geometry.vertices[i].y = -1;
 	}
 
 	// match boundaries
@@ -90,7 +100,7 @@ MAP.createHeightMap = function(plot) {
 	newPlot = plotX+','+(plotZ-1);
 	if(typeof MAP.map[newPlot] !== "undefined") {
 		for(var i=MAP.dimension;i>=0;i--) {
-			MAP.map[plot].geometry.vertices[i * (MAP.dimension + 1)].z = MAP.map[newPlot].geometry.vertices[i * (MAP.dimension + 1) + MAP.dimension].z;
+			MAP.map[plot].geometry.vertices[i * (MAP.dimension + 1)].y = MAP.map[newPlot].geometry.vertices[i * (MAP.dimension + 1) + MAP.dimension].y / (MAP.scale * MAP.scale);
 		}
 	}
 
@@ -98,7 +108,7 @@ MAP.createHeightMap = function(plot) {
 	newPlot = plotX+','+(plotZ+1);
 	if(typeof MAP.map[newPlot] !== "undefined") {
 		for(var i=MAP.dimension;i>=0;i--) {
-			MAP.map[plot].geometry.vertices[i * (MAP.dimension + 1) + MAP.dimension].z = MAP.map[newPlot].geometry.vertices[i * (MAP.dimension + 1)].z;
+			MAP.map[plot].geometry.vertices[i * (MAP.dimension + 1) + MAP.dimension].y = MAP.map[newPlot].geometry.vertices[i * (MAP.dimension + 1)].y / (MAP.scale * MAP.scale);
 		}
 	}
 
@@ -106,7 +116,7 @@ MAP.createHeightMap = function(plot) {
 	newPlot = (plotX+1)+','+plotZ;
 	if(typeof MAP.map[newPlot] !== "undefined") {
 		for(var i=MAP.dimension;i>=0;i--) {
-			MAP.map[plot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + i].z = MAP.map[newPlot].geometry.vertices[i].z;
+			MAP.map[plot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + i].y = MAP.map[newPlot].geometry.vertices[i].y / (MAP.scale * MAP.scale);
 		}
 	}
 
@@ -114,7 +124,7 @@ MAP.createHeightMap = function(plot) {
 	newPlot = (plotX-1)+','+plotZ;
 	if(typeof MAP.map[newPlot] !== "undefined") {
 		for(var i=MAP.dimension;i>=0;i--) {
-			MAP.map[plot].geometry.vertices[i].z = MAP.map[newPlot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + i].z;
+			MAP.map[plot].geometry.vertices[i].y = MAP.map[newPlot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + i].y / (MAP.scale * MAP.scale);
 		}
 	}
 
@@ -130,35 +140,35 @@ MAP.startDisplacement = function(plot) {
 
 	// top left
 	// 0 = 0 * (MAP.dimension + 1) + 0
-	if(MAP.map[plot].geometry.vertices[0].z == -1) {
-		MAP.map[plot].geometry.vertices[0].z = Math.random();
+	if(MAP.map[plot].geometry.vertices[0].y == -1) {
+		MAP.map[plot].geometry.vertices[0].y = Math.random();
 	}
-	tl = MAP.map[plot].geometry.vertices[0].z;
+	tl = MAP.map[plot].geometry.vertices[0].y;
 
 	// bottom left
 	// MAP.dimension = 0 * (MAP.dimension + 1) + MAP.dimension
-	if(MAP.map[plot].geometry.vertices[MAP.dimension].z == -1) {
-		MAP.map[plot].geometry.vertices[MAP.dimension].z = Math.random();
+	if(MAP.map[plot].geometry.vertices[MAP.dimension].y == -1) {
+		MAP.map[plot].geometry.vertices[MAP.dimension].y = Math.random();
 	}
-	bl = MAP.map[plot].geometry.vertices[MAP.dimension].z;
+	bl = MAP.map[plot].geometry.vertices[MAP.dimension].y;
 
 	// top right
 	// MAP.dimension * (MAP.dimension + 1) = MAP.dimension * (MAP.dimension + 1) + 0
-	if(MAP.map[plot].geometry.vertices[(MAP.dimension + 1) * MAP.dimension].z == -1) {
-		MAP.map[plot].geometry.vertices[(MAP.dimension + 1) * MAP.dimension].z = Math.random();
+	if(MAP.map[plot].geometry.vertices[(MAP.dimension + 1) * MAP.dimension].y == -1) {
+		MAP.map[plot].geometry.vertices[(MAP.dimension + 1) * MAP.dimension].y = Math.random();
 	}
-	tr = MAP.map[plot].geometry.vertices[(MAP.dimension + 1) * MAP.dimension].z;
+	tr = MAP.map[plot].geometry.vertices[(MAP.dimension + 1) * MAP.dimension].y;
 
 	// bottom right
 	// MAP.dimension * (MAP.dimension + 1) + MAP.dimension
-	if(MAP.map[plot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + MAP.dimension].z == -1) {
-		MAP.map[plot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + MAP.dimension].z = Math.random();
+	if(MAP.map[plot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + MAP.dimension].y == -1) {
+		MAP.map[plot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + MAP.dimension].y = Math.random();
 	}
-	br = MAP.map[plot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + MAP.dimension].z;
+	br = MAP.map[plot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + MAP.dimension].y;
 
 	// Center
-	MAP.map[plot].geometry.vertices[MAP.dimension / 2 * (MAP.dimension + 1) + (MAP.dimension / 2)].z = (tl + bl + tr + br) / 4;
-	center = MAP.map[plot].geometry.vertices[MAP.dimension / 2 * (MAP.dimension + 1) + MAP.dimension / 2].z;
+	MAP.map[plot].geometry.vertices[MAP.dimension / 2 * (MAP.dimension + 1) + (MAP.dimension / 2)].y = (tl + bl + tr + br) / 4;
+	center = MAP.map[plot].geometry.vertices[MAP.dimension / 2 * (MAP.dimension + 1) + MAP.dimension / 2].y;
 
 	/* Non wrapping terrain */
 	/*map[MAP.dimension / 2][MAP.dimension] = bl + br + center / 3;
@@ -168,19 +178,19 @@ MAP.startDisplacement = function(plot) {
 
 	/*Wrapping terrain */
 
-	if(MAP.map[plot].geometry.vertices[MAP.dimension / 2 * (MAP.dimension + 1) + MAP.dimension].z == -1) {
-		MAP.map[plot].geometry.vertices[MAP.dimension / 2 * (MAP.dimension + 1) + MAP.dimension].z = (bl + br + center + center) / 4;
+	if(MAP.map[plot].geometry.vertices[MAP.dimension / 2 * (MAP.dimension + 1) + MAP.dimension].y == -1) {
+		MAP.map[plot].geometry.vertices[MAP.dimension / 2 * (MAP.dimension + 1) + MAP.dimension].y = (bl + br + center + center) / 4;
 	}
 	// MAP.dimension / 2 * (MAP.dimension + 1) = MAP.dimension / 2 * (MAP.dimension + 1) + 0
-	if(MAP.map[plot].geometry.vertices[MAP.dimension / 2 * (MAP.dimension + 1)].z == -1) {
-		MAP.map[plot].geometry.vertices[MAP.dimension / 2 * (MAP.dimension + 1)].z = (tl + tr + center + center) / 4;
+	if(MAP.map[plot].geometry.vertices[MAP.dimension / 2 * (MAP.dimension + 1)].y == -1) {
+		MAP.map[plot].geometry.vertices[MAP.dimension / 2 * (MAP.dimension + 1)].y = (tl + tr + center + center) / 4;
 	}
-	if(MAP.map[plot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + MAP.dimension / 2].z == -1) {
-		MAP.map[plot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + MAP.dimension / 2].z = (tr + br + center + center) / 4;
+	if(MAP.map[plot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + MAP.dimension / 2].y == -1) {
+		MAP.map[plot].geometry.vertices[MAP.dimension * (MAP.dimension + 1) + MAP.dimension / 2].y = (tr + br + center + center) / 4;
 	}
 	// MAP.dimension / 2 = 0 * (MAP.dimension + 1) + MAP.dimension / 2
-	if(MAP.map[plot].geometry.vertices[MAP.dimension / 2].z == -1) {
-		MAP.map[plot].geometry.vertices[MAP.dimension / 2].z = (tl + bl + center + center) / 4;
+	if(MAP.map[plot].geometry.vertices[MAP.dimension / 2].y == -1) {
+		MAP.map[plot].geometry.vertices[MAP.dimension / 2].y = (tl + bl + center + center) / 4;
 	}
 
 	// Call displacment
@@ -193,79 +203,79 @@ MAP.midpointDisplacment = function(plot, dimension, roughness) {
 		t, tr, tl, b, bl, br, r, l, center,
 		i, j, index;
 
-	if (newDimension > 1) {
+	if(newDimension > 1) {
 		for(i = newDimension; i <= MAP.dimension; i += newDimension) {
 			for(j = newDimension; j <= MAP.dimension; j += newDimension) {
 				x = i - (newDimension / 2);
 				y = j - (newDimension / 2);
 
 				index = (i - newDimension) * (MAP.dimension + 1) + (j - newDimension);
-				tl = MAP.map[plot].geometry.vertices[index].z;
+				tl = MAP.map[plot].geometry.vertices[index].y;
 
 				index = i * (MAP.dimension + 1) + (j - newDimension);
-				tr = MAP.map[plot].geometry.vertices[index].z;
+				tr = MAP.map[plot].geometry.vertices[index].y;
 
 				index = (i - newDimension) * (MAP.dimension + 1) + j;
-				bl = MAP.map[plot].geometry.vertices[index].z;
+				bl = MAP.map[plot].geometry.vertices[index].y;
 
 				index = i * (MAP.dimension + 1) + j;
-				br = MAP.map[plot].geometry.vertices[index].z;
+				br = MAP.map[plot].geometry.vertices[index].y;
 
 				// Center
 				index = x * (MAP.dimension + 1) + y;
-				if(MAP.map[plot].geometry.vertices[index].z == -1) {
-					MAP.map[plot].geometry.vertices[index].z = bound((tl + tr + bl + br) / 4 + displace(dimension, roughness), 0, 1);
+				if(MAP.map[plot].geometry.vertices[index].y == -1) {
+					MAP.map[plot].geometry.vertices[index].y = bound((tl + tr + bl + br) / 4 + displace(dimension, roughness), 0, 1);
 				}
-				center = MAP.map[plot].geometry.vertices[index].z;
+				center = MAP.map[plot].geometry.vertices[index].y;
 
 				// Top
 				index = x * (MAP.dimension + 1) + (j - newDimension);
-				if(MAP.map[plot].geometry.vertices[index].z == -1) {
-					if(j - (newDimension * 2) + (newDimension / 2) > 0 && + MAP.map[plot].geometry.vertices[x * (MAP.dimension + 1) + (j - dimension + (newDimension / 2))].z != -1) {
-						MAP.map[plot].geometry.vertices[index].z = (tl + tr + center + MAP.map[plot].geometry.vertices[x * (MAP.dimension + 1) + (j - dimension + (newDimension / 2))].z) / 4 + displace(dimension, roughness);
+				if(MAP.map[plot].geometry.vertices[index].y == -1) {
+					if(j - (newDimension * 2) + (newDimension / 2) > 0 && + MAP.map[plot].geometry.vertices[x * (MAP.dimension + 1) + (j - dimension + (newDimension / 2))].y != -1) {
+						MAP.map[plot].geometry.vertices[index].y = (tl + tr + center + MAP.map[plot].geometry.vertices[x * (MAP.dimension + 1) + (j - dimension + (newDimension / 2))].y) / 4 + displace(dimension, roughness);
 					} else {
-						MAP.map[plot].geometry.vertices[index].z = (tl + tr + center) / 3 + displace(dimension, roughness);
+						MAP.map[plot].geometry.vertices[index].y = (tl + tr + center) / 3 + displace(dimension, roughness);
 					}
 				}
 
-				//MAP.map[plot].geometry.vertices[index].z = bound(map[x][j - newDimension], 0, 1);
+				//MAP.map[plot].geometry.vertices[index].y = bound(map[x][j - newDimension], 0, 1);
 
 				// Bottom
 				index = x * (MAP.dimension + 1) + j;
-				if(MAP.map[plot].geometry.vertices[index].z == -1) {
-					if(j + (newDimension / 2) < MAP.dimension && MAP.map[plot].geometry.vertices[x * (MAP.dimension + 1) + (j + (newDimension / 2))].z != -1) {
-						MAP.map[plot].geometry.vertices[index].z = (bl + br + center + MAP.map[plot].geometry.vertices[x * (MAP.dimension + 1) + (j + (newDimension / 2))].z) / 4 + displace(dimension, roughness);
+				if(MAP.map[plot].geometry.vertices[index].y == -1) {
+					if(j + (newDimension / 2) < MAP.dimension && MAP.map[plot].geometry.vertices[x * (MAP.dimension + 1) + (j + (newDimension / 2))].y != -1) {
+						MAP.map[plot].geometry.vertices[index].y = (bl + br + center + MAP.map[plot].geometry.vertices[x * (MAP.dimension + 1) + (j + (newDimension / 2))].y) / 4 + displace(dimension, roughness);
 					} else {
-						MAP.map[plot].geometry.vertices[index].z = (bl + br + center) / 3 + displace(dimension, roughness);
+						MAP.map[plot].geometry.vertices[index].y = (bl + br + center) / 3 + displace(dimension, roughness);
 					}
 				}
 
-				//MAP.map[plot].geometry.vertices[index].z = bound(map[x][j], 0, 1);
+				//MAP.map[plot].geometry.vertices[index].y = bound(map[x][j], 0, 1);
 
 
 				// Right
 				index = i * (MAP.dimension + 1) + y;
-				if(MAP.map[plot].geometry.vertices[index].z == -1) {
-					if(i + (newDimension / 2) < MAP.dimension && MAP.map[plot].geometry.vertices[(i + (newDimension / 2)) * (MAP.dimension + 1) + y].z != -1) {
-						MAP.map[plot].geometry.vertices[index].z = (tr + br + center + MAP.map[plot].geometry.vertices[(i + (newDimension / 2)) * (MAP.dimension + 1) + y].z) / 4 + displace(dimension, roughness);
+				if(MAP.map[plot].geometry.vertices[index].y == -1) {
+					if(i + (newDimension / 2) < MAP.dimension && MAP.map[plot].geometry.vertices[(i + (newDimension / 2)) * (MAP.dimension + 1) + y].y != -1) {
+						MAP.map[plot].geometry.vertices[index].y = (tr + br + center + MAP.map[plot].geometry.vertices[(i + (newDimension / 2)) * (MAP.dimension + 1) + y].y) / 4 + displace(dimension, roughness);
 					} else {
-						MAP.map[plot].geometry.vertices[index].z = (tr + br + center) / 3 + displace(dimension, roughness);
+						MAP.map[plot].geometry.vertices[index].y = (tr + br + center) / 3 + displace(dimension, roughness);
 					}
 				}
 
-				//MAP.map[plot].geometry.vertices[index].z = bound(map[i][y], 0, 1);
+				//MAP.map[plot].geometry.vertices[index].y = bound(map[i][y], 0, 1);
 
 				// Left
 				index = (i - newDimension) * (MAP.dimension + 1) + y;
-				if(MAP.map[plot].geometry.vertices[index].z == -1) {
-					if(i - (newDimension * 2) + (newDimension / 2) > 0 && MAP.map[plot].geometry.vertices[(i - dimension + (newDimension / 2)) * (MAP.dimension + 1) + y].z != -1) {
-						MAP.map[plot].geometry.vertices[index].z = (tl + bl + center + MAP.map[plot].geometry.vertices[(i - dimension + (newDimension / 2)) * (MAP.dimension + 1) + y].z) / 4 + displace(dimension, roughness);;
+				if(MAP.map[plot].geometry.vertices[index].y == -1) {
+					if(i - (newDimension * 2) + (newDimension / 2) > 0 && MAP.map[plot].geometry.vertices[(i - dimension + (newDimension / 2)) * (MAP.dimension + 1) + y].y != -1) {
+						MAP.map[plot].geometry.vertices[index].y = (tl + bl + center + MAP.map[plot].geometry.vertices[(i - dimension + (newDimension / 2)) * (MAP.dimension + 1) + y].y) / 4 + displace(dimension, roughness);;
 					} else {
-						MAP.map[plot].geometry.vertices[index].z = (tl + bl + center) / 3 + displace(dimension, roughness);
+						MAP.map[plot].geometry.vertices[index].y = (tl + bl + center) / 3 + displace(dimension, roughness);
 					}
 				}
 
-				//MAP.map[plot].geometry.vertices[index].z = bound(map[i - newDimension][y], 0, 1);
+				//MAP.map[plot].geometry.vertices[index].y = bound(map[i - newDimension][y], 0, 1);
 			}
 		}
 		MAP.midpointDisplacment(plot, newDimension, roughness);
@@ -295,7 +305,7 @@ MAP.createMesh = function(plot) {
 	MAP.map[plot].geometry.computeFaceNormals();
 
 	for (var i = 0; i < MAP.map[plot].geometry.vertices.length; i++) {
-		c = MAP.map[plot].geometry.vertices[i].z;
+		c = MAP.map[plot].geometry.vertices[i].y;
 		color = MAP.colorFade(c);
 
         MAP.map[plot].geometry.colors.push(color);
@@ -311,17 +321,14 @@ MAP.createMesh = function(plot) {
     MAP.map[plot].geometry.computeVertexNormals();
 	MAP.map[plot].geometry.computeFaceNormals();
 
-	MAP.map[plot].material = new THREE.MeshLambertMaterial({
-		vertexColors: true,
-		wireframe: false,
-	    shading: THREE.SmoothShading,
-	    //overdraw: true
-	});
-	MAP.map[plot].mesh = new THREE.Mesh(MAP.map[plot].geometry, MAP.map[plot].material);
-	MAP.map[plot].mesh.rotation.x = -Math.PI / 2;
-	MAP.map[plot].mesh.scale.z = MAP.scale * MAP.scale;
-	MAP.map[plot].mesh.position.x = plotZ*MAP.dimension*MAP.scale;
-	MAP.map[plot].mesh.position.z = plotX*MAP.dimension*MAP.scale;
+	var translation = new THREE.Matrix4().makeTranslation(plotZ*MAP.dimension, 0, plotX*MAP.dimension);
+	var matrix = new THREE.Matrix4();
+	matrix.multiplyMatrices(MAP.scaleMatrix, translation);
+
+	MAP.map[plot].geometry.applyMatrix(matrix);
+	
+    MAP.map[plot].geometry.computeVertexNormals();
+	MAP.map[plot].geometry.computeFaceNormals();
 };
 
 MAP.getHeight = function(x, z) {
@@ -361,7 +368,6 @@ MAP.COLORS =
 // utility for color interpolation
 // got from http://www.somethinghitme.com/projects/canvasterrain/
 MAP.colorFade = function(c) {
-	c = bound(c, 0, 1);
 	var colorS, totalSteps, step, r, g, b;
     if (c <= 0.3) {
         colorS = MAP.COLORS.water;
