@@ -2,6 +2,7 @@ var MAP = MAP || {};
 
 MAP.dimension = 128;
 MAP.scale = 64;
+MAP.numPlots = 0;
 
 MAP.updateMap = function (x, z) {
 	// check to see if map section is already created
@@ -23,11 +24,13 @@ MAP.updateMap = function (x, z) {
 		    newPlot = (i+plotX)+','+(j+plotZ);
 	        if(typeof MAP.map[newPlot] === "undefined") {
 	    		MAP.map[newPlot] = {};
-	var startTime = Date.now();
+var startTime = Date.now();
 				MAP.createMap(newPlot);
-	console.log(newPlot+' created in '+(Date.now() - startTime));
-				meshes.push(MAP.map[newPlot].mesh);
+				MAP.numPlots++;
+console.log('numPlots='+MAP.numPlots);
+console.log(newPlot+' created in '+(Date.now() - startTime));
 			}
+			meshes.push(MAP.map[newPlot].mesh);
 		}
 		}
 
