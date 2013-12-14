@@ -39,8 +39,8 @@ LIFE.init = function() {
 
     // Create a camera, zoom it out from the model a bit, and add it to the scene.
     LIFE.camera = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 20000);
-    LIFE.camera.position.set(0, 64*256, 0);
-    LIFE.camera.lookAt(1, 64*256, 0);
+    LIFE.camera.position.set(0, 64*64, 0);
+    LIFE.camera.lookAt(0, 64*64, 1);
     LIFE.scene.add(LIFE.camera);
 
     // Render the scene.
@@ -48,8 +48,8 @@ LIFE.init = function() {
     document.body.appendChild(LIFE.renderer.domElement);
 
     LIFE.controls = new THREE.FirstPersonControls(LIFE.camera, LIFE.renderer.domElement);
-    LIFE.controls.lookSpeed = 0.00008;
-    LIFE.controls.movementSpeed = 2.0;
+    LIFE.controls.lookSpeed = 0.0001;
+    LIFE.controls.movementSpeed = 1.0;
 
     // TODO: Add Intro screen with start button
     LIFE.start();
@@ -64,64 +64,22 @@ LIFE.start = function() {
 };
 
 LIFE.createScene = function() {
-    // create a point light and set it's position, and add it to the scene.
-    LIFE.pointLight = new THREE.PointLight(0xffffff);
-    LIFE.pointLight.position.set(0, 32*4*256, 0);
-    LIFE.scene.add(LIFE.pointLight);
+    // add subtle blue ambient lighting
+    LIFE.ambientLight = new THREE.AmbientLight(0xffffff);
+    //LIFE.scene.add(LIFE.ambientLight);
 
-    console.log("start:" + (Date.now() - LIFE._lastFrameTime));
-    LIFE.map = new MAP.createMap();
-    console.log("map created:" + (Date.now() - LIFE._lastFrameTime));
+    // directional lighting
+    LIFE.directionalLight = new THREE.DirectionalLight(0xffffff);
+    LIFE.directionalLight.position.set(0, 10000, 0).normalize();
+    LIFE.scene.add(LIFE.directionalLight);
 
-    // create the particle variables
-    var geometry = new THREE.Geometry(),
-        count, c, tr, br, bl,
-        scale = 100,
-        color = new THREE.Color(),
-        normal = new THREE.Vector3(0, 1, 0);
+console.log("start:" + (Date.now() - LIFE._lastFrameTime));
+    LIFE.map = MAP.updateMap(LIFE.controls.object.position.x, LIFE.controls.object.position.z);
+    LIFE.scene.add(LIFE.map.mesh);
 
-    // now create the individual particles
-    var i, j;
-    for (i = 0; i < MAP.dimension; i += 1) {
-    for (j = 0; j < MAP.dimension; j += 1) {
-        c = LIFE.map[i][j];
-        tr = LIFE.map[i+1][j];
-        br = LIFE.map[i+1][j+1];
-        bl = LIFE.map[i][j+1];
-
-        geometry.vertices.push(new THREE.Vector3(i, c*64, j));
-        geometry.vertices.push(new THREE.Vector3(i+1, tr*64, j));
-        geometry.vertices.push(new THREE.Vector3(i+1, br*64, j+1));
-        geometry.vertices.push(new THREE.Vector3(i, bl*64, j+1));
-
-        color = MAP.colorFade(c);
-        geometry.colors.push(color);
-        geometry.colors.push(color);
-        geometry.colors.push(color);
-        geometry.colors.push(color);
-
-        count = (j+i*(MAP.dimension))*4;
-        geometry.faces.push(new THREE.Face3(count, count+2, count+1, normal, color));
-        geometry.faces.push(new THREE.Face3(count+3, count+2, count, normal, color));
-    }
-    }
-    var material = new THREE.MeshLambertMaterial({
-        wireframe: false,
-        wireframeLinewidth: 3,
-        vertexColors: THREE.VertexColors,
-        shading: THREE.SmoothShading
-    });
-    geometry.mergeVertices();
-    geometry.computeFaceNormals();
-    geometry.computeVertexNormals();
-    var ground = new THREE.Mesh(geometry, material);
-    ground.scale.set(scale, scale, scale);
-    ground.position.set(-scale*MAP.dimension/2, -scale*.3, -scale*MAP.dimension/2);
-    LIFE.scene.add(ground);
-    console.log("map mesh:" + (Date.now() - LIFE._lastFrameTime));
-
+var startTime = Date.now();
     LIFE.renderer.render(LIFE.scene, LIFE.camera);
-    console.log("map drawn:" + (Date.now() - LIFE._lastFrameTime));
+console.log("map drawn in " + (Date.now() - startTime));
 };
 
  // Renders the scene and updates the render as needed.
@@ -130,6 +88,8 @@ LIFE.animate = function() {
     var frameTimeDelta = time - LIFE._lastFrameTime;
 
     LIFE.controls.update(frameTimeDelta);
+LIFE.controls.object.position.y = MAP.getHeight(LIFE.controls.object.position.x, LIFE.controls.object.position.z) + 100;
+    //LIFE.map = MAP.updateMap(LIFE.controls.object.position.x, LIFE.controls.object.position.z);
     LIFE.renderer.render(LIFE.scene, LIFE.camera);
 
     LIFE._lastFrameTime = time;
